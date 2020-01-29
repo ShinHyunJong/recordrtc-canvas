@@ -1,15 +1,18 @@
 import React, { createRef } from 'react';
 import styled from 'styled-components';
 import SampleImg from '../../images/sample.png';
+import _ from 'lodash';
 
 const Canvas = styled.canvas`
   border: 1px solid blue;
+  /* width: 100%;
+  height: 100%; */
 `;
 
 class RainbowCanvas extends React.Component {
   constructor(props) {
     super(props),
-    (this.state = {
+      (this.state = {
         isDrawing: false,
         lastX: 0,
         lastY: 0,
@@ -23,16 +26,17 @@ class RainbowCanvas extends React.Component {
         maxWidth: 100,
         minWidth: 5,
         image: null,
-    }),
-    (this.draw = this.draw.bind(this)),
-    (this.handleWidth = this.handleWidth.bind(this)),
-    (this.toggleControls = this.toggleControls.bind(this));
+      }),
+      (this.draw = this.draw.bind(this)),
+      (this.handleWidth = this.handleWidth.bind(this)),
+      (this.toggleControls = this.toggleControls.bind(this));
     this.handleInputChange = this.handleInputChange.bind(this);
     this.imageRef = createRef(null);
   }
 
   canvas() {
-    return document.querySelector('#draw');
+    const canvas = document.querySelector('#draw');
+    return canvas;
   }
 
   ctx() {
@@ -50,6 +54,28 @@ class RainbowCanvas extends React.Component {
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.lineWidth = Number(this.state.minWidth) + 1;
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (!_.isEqual(prevProps.image, this.props.image)) {
+      const canvas = this.canvas();
+      console.log(this.props.image)
+      const { canvasWrapperRef } = this.props;
+      const canvasWrapperWidth = canvasWrapperRef.current.offsetWidth;
+      const canvasWrapperHeight = canvasWrapperRef.current.offsetHeight;
+      canvas.width = canvasWrapperWidth;
+      canvas.height = canvasWrapperHeight;
+      canvas.style.width = canvasWrapperWidth;
+      canvas.style.height = canvasWrapperHeight;
+      const ctx = this.ctx();
+      const image = new Image(canvasWrapperWidth, 'auto');
+      image.onload = () => {
+        ctx.drawImage(image, 0, 0, canvasWrapperWidth, canvasWrapperHeight);
+        
+        // context.drawImage(imageObj, 0, 0, 100, 100 * imageObj.height / imageObj.width)
+      };
+      image.src = this.props.image.base64;
+    }
   }
 
   draw(e) {
@@ -122,25 +148,6 @@ class RainbowCanvas extends React.Component {
     }
   }
 
-  onChangeFile = e => {
-    e.preventDefault();
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadend = () => {
-      const ctx = this.ctx();
-      const image = new Image();
-      image.onload = function() {
-        ctx.drawImage(image, 0, 0);
-      };
-      image.src = reader.result;
-      this.setState({
-        file,
-        image: reader.result,
-      });
-    };
-  };
-
   handleInputChange(event) {
     const { target } = event;
     const value = target.type === 'checkbox' ? target.checked : target.value;
@@ -152,7 +159,6 @@ class RainbowCanvas extends React.Component {
 
     if (name === 'minWidth' || name === 'maxWidth') {
       this.ctx().lineWidth = Number(this.state.minWidth) + 1;
-      console.log(this.ctx().lineWidth);
     }
     if (name === 'customStroke' && value === true) {
       this.ctx().lineWidth = this.state.minWidth;
@@ -163,13 +169,10 @@ class RainbowCanvas extends React.Component {
 
   render() {
     return (
-      <div>
-        <input type="file" name="file" onChange={this.onChangeFile} />
+      <>
         <Canvas
           ref={this.props.canvasRef}
           id="draw"
-          width={this.props.width}
-          height={this.props.height}
           onMouseMove={this.draw}
           onMouseDown={e => {
             this.setState({
@@ -194,7 +197,7 @@ class RainbowCanvas extends React.Component {
           fixedWidth={this.state.customStroke}
         />
         <ButtonOptions onClick={this.toggleControls} />
-      </div>
+      </>
     );
   }
 }
