@@ -9,13 +9,12 @@ import React, { useRef, useState, useEffect } from 'react';
 import { FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
 import { fromJS } from 'immutable';
-import messages from './messages';
-import CustomCanvas from './CustomCanvas';
+
+import { CustomCanvas } from '../../components';
 import {
   Wrapper,
   LeftWrapper,
   RightWrapper,
-  PanWrapper,
   CanvasWrapper,
   PaginationWrapper,
   PageThumb,
@@ -28,6 +27,7 @@ const initialState = {
   color: 'white',
   point: { last: [], current: [] },
   deletedPoint: { last: [], current: [] },
+  imageUrl: null,
 };
 export default function HomePage() {
   const { RecordRTC, getTracks } = window;
@@ -41,10 +41,6 @@ export default function HomePage() {
   const [pageList, setPageList] = useState([initialState]);
   const [selectedStream, setSelectedStream] = useState(initialState);
   const [isRecording, setIsRecording] = useState(false);
-
-  // useEffect(() => {
-  //   const cRef = canvasEl.current;
-  // }, [canvasEl]);
 
   const onClickStart = () => {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(audioStream => {
@@ -72,6 +68,7 @@ export default function HomePage() {
 
   const onClickEnd = () => {
     recorder.stopRecording(() => {
+      recorder.getDataURL(url => console.log(url));
       const blob = recorder.getBlob();
       setBlob(URL.createObjectURL(blob));
       console.log(URL.createObjectURL(blob));
@@ -82,14 +79,15 @@ export default function HomePage() {
     });
   };
 
-  const onChangeFile = e => {
-    e.preventDefault();
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadend = () => {
-      setImage({ file, base64: reader.result });
-    };
+  const onChangeImage = imageUrl => {
+    const currentPageList = fromJS(pageList);
+    const transformed = currentPageList.toJS().map(x => {
+      if (selectedStream.id === x.id) {
+        return { ...x, imageUrl };
+      }
+      return { ...x };
+    });
+    setPageList(transformed);
   };
 
   const onClickAddPage = () => {
@@ -99,6 +97,7 @@ export default function HomePage() {
       color: 'white',
       point: { last: [], current: [] },
       deletedPoint: { last: [], current: [] },
+      imageUrl: null,
     };
     const newArray = [...currentStreamArray.toJS(), newStream];
     setPageList(newArray);
@@ -132,40 +131,40 @@ export default function HomePage() {
 
   const renderContent = () => {
     if (!isRecording && !_blob) {
-      return <h4>녹화를 눌러주세요</h4>;
+      return (
+        <CanvasWrapper>
+          <h3>녹화를 눌러주세요</h3>
+        </CanvasWrapper>
+      );
     }
     if (isRecording && !_blob) {
       return (
-        <CanvasWrapper ref={canvasWrapperRef}>
-          <CustomCanvas
-            canvasWrapperRef={canvasWrapperRef}
-            canvasRef={canvasEl}
-            selectedStream={selectedStream}
-            image={_image}
-            pageList={pageList}
-            // onLeaveMouse={onLeaveMouse}
-            onDraw={onDraw}
-            unDo={onClickControl}
-            reDo={onClickControl}
-          />
-        </CanvasWrapper>
+        <CustomCanvas
+          canvasWrapperRef={canvasWrapperRef}
+          canvasRef={canvasEl}
+          selectedStream={selectedStream}
+          // onLeaveMouse={onLeaveMouse}
+          onDraw={onDraw}
+          onChangeImage={onChangeImage}
+          unDo={onClickControl}
+          reDo={onClickControl}
+        />
       );
     }
     if (!isRecording && _blob) {
       return <Video controls src={_blob} autoPlay loop />;
     }
+    return null;
   };
 
   return (
     <Wrapper>
       <LeftWrapper>
         <LogoWrapper>
-          <input type="file" name="file" onChange={onChangeFile} />
           <button onClick={onClickAddPage}>페이지 추가</button>
           <button onClick={onClickStart}>start</button>
           <button onClick={onClickEnd}>end</button>
         </LogoWrapper>
-
         <PaginationWrapper>
           {pageList.map(x => (
             <PageThumb
@@ -177,7 +176,9 @@ export default function HomePage() {
           ))}
         </PaginationWrapper>
       </LeftWrapper>
-      <RightWrapper>{renderContent()}</RightWrapper>
+      <RightWrapper>
+        <CanvasWrapper ref={canvasWrapperRef}>{renderContent()}</CanvasWrapper>
+      </RightWrapper>
     </Wrapper>
   );
 }

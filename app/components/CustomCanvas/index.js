@@ -1,32 +1,38 @@
 /* eslint-disable jsx-a11y/mouse-events-have-key-events */
 import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { fromJS, set } from 'immutable';
-import { StyledCanvas, ControlWrapper } from './styles';
-import PenIcon from '../../../images/pen.png';
+import { fromJS } from 'immutable';
+import { StyledCanvas } from './styles';
 import Controller from './Controller';
 
-const initialLogState = { last: [], current: [], drawTag: 0 };
+const initialLogState = {
+  last: [],
+  current: [],
+  drawTag: 0,
+  lineWidth: 5,
+  lineColor: '#696969',
+};
 
 const CustomCanvas = ({
   canvasWrapperRef,
-  image,
   canvasRef,
-  pageList,
   selectedStream,
   onLeaveMouse,
   onDraw,
   unDo,
   reDo,
+  onChangeImage,
 }) => {
   const [isDrawing, setIsDrawing] = useState(false);
-  const [lastX, setLastX] = useState(0);
-  const [lastY, setLastY] = useState(0);
+  const [undoClicked, setUndoClicked] = useState(false);
+  const [_lastX, setLastX] = useState(0);
+  const [_lastY, setLastY] = useState(0);
   const [log, setLog] = useState(initialLogState);
   const [deletedLog, setDeletedLog] = useState(initialLogState);
   const [drawTag, setDrawTag] = useState(initialLogState.drawTag);
-  const [controlDisplay, setControlDisplay] = useState('none');
-  const [controlLeft, setControlLeft] = useState('100%');
-  const [strokeWidth, setStrokeWidth] = useState();
+  const [controlDisplay, setControlDisplay] = useState(true);
+  const [_lineWidth, setLineWidth] = useState(initialLogState.lineWidth);
+  const [_lineColor, setLineColor] = useState(initialLogState.lineColor);
+  const [_imageUrl, setImageUrl] = useState(null);
 
   const getCanvas = () => {
     const canvas = canvasRef.current;
@@ -35,10 +41,14 @@ const CustomCanvas = ({
 
   const getCtx = () => getCanvas().getContext('2d');
 
-  const setFillWidth = () => {
+  const setFullWidth = () => {
     const canvas = getCanvas();
-    const canvasWrapperWidth = canvasWrapperRef.current.clientWidth;
-    const canvasWrapperHeight = canvasWrapperRef.current.clientHeight;
+    // const canvasWrapperWidth = canvasWrapperRef.current.clientWidth;
+    // const canvasWrapperHeight = canvasWrapperRef.current.clientHeight;
+
+    const canvasWrapperWidth = 800;
+    const canvasWrapperHeight = 600;
+
     canvas.width = canvasWrapperWidth;
     canvas.height = canvasWrapperHeight;
     canvas.style.width = canvasWrapperWidth;
@@ -51,32 +61,74 @@ const CustomCanvas = ({
 
   const setBlank = () => {
     const ctx = getCtx();
-    const { parentWidth, parentHeight } = setFillWidth();
+    const { parentWidth, parentHeight } = setFullWidth();
     ctx.fillStyle = selectedStream.color;
     ctx.fillRect(0, 0, parentWidth, parentHeight);
   };
 
-  const draw = e => {
+  const drawImage = imageUrl => {
+    // const { parentWidth, parentHeight } = setFullWidth();
     const ctx = getCtx();
-    if (isDrawing) {
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-      ctx.stroke();
-      setLastX(e.nativeEvent.offsetX);
-      setLastY(e.nativeEvent.offsetY);
+    const newImage = new Image(800, 'auto');
+    newImage.onload = () => {
+      ctx.drawImage(newImage, 0, 0, 800, 600);
+    };
+    newImage.src = imageUrl;
+    setImageUrl(imageUrl);
+  };
 
+  const drawLine = ({
+    offsetX,
+    offsetY,
+    isFirst,
+    lastX,
+    lastY,
+    lineWidth,
+    lineColor,
+  }) => {
+    const ctx = getCtx();
+    ctx.beginPath();
+    if (!isFirst) {
+      ctx.moveTo(lastX || _lastX, lastY || _lastY);
+    }
+    ctx.strokeStyle = lineColor || _lineColor;
+    ctx.lineWidth = lineWidth || _lineWidth;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.lineTo(offsetX, offsetY);
+    ctx.stroke();
+    setLastX(offsetX);
+    setLastY(offsetY);
+  };
+
+  const draw = e => {
+    const { offsetX, offsetY } = e.nativeEvent;
+    if (isDrawing) {
+      drawLine({ offsetX, offsetY });
       // 마지막 포인트 배열에서 중복 제거.
-      const filtered = log.last.filter(c => c.x === lastX && c.y === lastY);
+      const filtered = log.last.filter(
+        c => c.offsetX === _lastX && c.offsetY === _lastY,
+      );
       let newPoint;
       if (filtered.length === 0) {
-        const lastLog = [...log.last, { x: lastX, y: lastY, drawTag }];
+        const lastLog = [
+          ...log.last,
+          {
+            offsetX: _lastX,
+            offsetY: _lastY,
+            drawTag,
+            lineWidth: _lineWidth,
+            lineColor: _lineColor,
+          },
+        ];
         const currentLog = [
           ...log.current,
           {
-            x: e.nativeEvent.offsetX,
-            y: e.nativeEvent.offsetY,
+            offsetX,
+            offsetY,
             drawTag,
+            lineWidth: _lineWidth,
+            lineColor: _lineColor,
           },
         ];
         newPoint = { last: lastLog, current: currentLog };
@@ -89,18 +141,21 @@ const CustomCanvas = ({
   };
 
   const onMouseDown = e => {
-    const ctx = getCtx();
-    ctx.beginPath();
-    ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-    ctx.stroke();
+    const { offsetX, offsetY } = e.nativeEvent;
     setIsDrawing(true);
-    setLastX(e.nativeEvent.offsetX);
-    setLastY(e.nativeEvent.offsetY);
+    drawLine({
+      offsetX,
+      offsetY,
+      isFirst: true,
+    });
   };
 
-  const onMouseUp = () => {
+  const onMouseUp = e => {
+    const { offsetX, offsetY } = e.nativeEvent;
+    drawLine({ offsetX, offsetY });
     setIsDrawing(false);
     setDrawTag(drawTag + 1);
+    setUndoClicked(false);
   };
 
   const onMouseOut = () => {
@@ -108,13 +163,16 @@ const CustomCanvas = ({
   };
 
   const drawPoints = point => {
-    const ctx = getCtx();
     const iter = point.last.length;
     for (let i = 0; i < iter; i += 1) {
-      ctx.beginPath();
-      ctx.moveTo(point.last[i].x, point.last[i].y);
-      ctx.lineTo(point.current[i].x, point.current[i].y);
-      ctx.stroke();
+      drawLine({
+        lastX: point.last[i].offsetX,
+        lastY: point.last[i].offsetY,
+        offsetX: point.current[i].offsetX,
+        offsetY: point.current[i].offsetY,
+        lineWidth: point.current[i].lineWidth,
+        lineColor: point.current[i].lineColor,
+      });
     }
   };
 
@@ -148,13 +206,22 @@ const CustomCanvas = ({
     setDeletedLog(targetLog);
     // 각 페이지의 로그 바꾸고
     unDo({ undoLog: newLog, redoLog: targetLog });
+    setUndoClicked(true);
     // 빈 종이 세팅
-    setBlank();
-    // 이전 배열 그림
-    drawPoints(newLog);
+
+    if (_imageUrl) {
+      drawImage(_imageUrl);
+      setTimeout(() => {
+        drawPoints(newLog);
+      }, 0);
+    } else {
+      setBlank();
+      drawPoints(newLog);
+    }
   };
 
   const onClickRedo = () => {
+    if (!undoClicked) return;
     const currentDeleted = fromJS(deletedLog);
     const currentLog = fromJS(log);
     const targetJS = currentDeleted.toJS();
@@ -194,68 +261,70 @@ const CustomCanvas = ({
     };
     setLog(recoveredPoint);
     reDo({ undoLog: recoveredPoint, redoLog: newDeletedLog });
-    setBlank();
-    drawPoints(recoveredPoint);
-  };
 
-  const toggleControls = () => {
-    const onScreen = controlLeft;
-    const display = controlDisplay;
-    const fade = () => {
-      if (onScreen === '0%') {
-        setControlLeft('100%');
-      } else {
-        setControlLeft('0%');
-      }
-    };
-    if (
-      (display === 'none' && onScreen === '100%') ||
-      (display === 'block' && onScreen === '0%')
-    ) {
-      if (display === 'none') {
-        setControlDisplay('block');
-        setTimeout(() => fade(), 0);
-      } else {
-        fade();
-        setTimeout(() => setControlDisplay('none'), 500);
-      }
+    if (_imageUrl) {
+      drawImage(_imageUrl);
+      setTimeout(() => {
+        drawPoints(recoveredPoint);
+      }, 0);
+    } else {
+      setBlank();
+      drawPoints(recoveredPoint);
     }
   };
 
-  const onChangeStrokeWidth = e => {
-    setStrokeWidth(e.target.value);
-    const ctx = getCtx();
-    ctx.lineWidth = Number(e.target.value);
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
+  const toggleControls = () => {
+    setControlDisplay(!controlDisplay);
+  };
+
+  const onChangeFile = e => {
+    e.preventDefault();
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = () => {
+      const base64 = reader.result;
+      drawImage(base64);
+      onChangeImage(base64);
+    };
+  };
+
+  const onChangeLineWidth = e => {
+    setLineWidth(Number(e.target.value));
+  };
+
+  const onChangeLineColor = e => {
+    setLineColor(e.target.value);
   };
 
   useLayoutEffect(() => {
     const ctx = getCtx();
-    ctx.strokeStyle = '#BADA55';
+    ctx.strokeStyle = _lineColor;
+    ctx.lineWidth = _lineWidth;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
   }, []);
 
   useEffect(() => {
-    if (!image) return;
-    const { parentWidth, parentHeight } = setFillWidth();
-    const ctx = getCtx();
-    const newImage = new Image(parentWidth, 'auto');
-    newImage.onload = () => {
-      ctx.drawImage(newImage, 0, 0, parentWidth, parentHeight);
-    };
-    newImage.src = image.base64;
-  }, [image]);
-
-  useEffect(() => {
+    console.log(selectedStream);
     // 처음 로그 초기화
     setLog(selectedStream.point);
     setDeletedLog(selectedStream.deletedPoint);
-    setBlank();
-    const { point } = selectedStream;
-    if (point.last.length !== 0) {
-      drawPoints(point);
+    const { point, imageUrl } = selectedStream;
+
+    if (imageUrl) {
+      drawImage(imageUrl);
+      if (point.last.length !== 0) {
+        setTimeout(() => {
+          drawPoints(point);
+        }, 0);
+      }
+    } else {
+      setImageUrl(null);
+      setBlank();
+      if (point.last.length !== 0) {
+        drawPoints(point);
+      }
     }
   }, [selectedStream]);
 
@@ -270,15 +339,16 @@ const CustomCanvas = ({
         onMouseOut={onMouseOut}
       />
       <Controller
-        left={controlLeft}
         display={controlDisplay}
-        onChangeStrokeWidth={onChangeStrokeWidth}
+        lineWidth={_lineWidth}
+        onChangeLineWidth={onChangeLineWidth}
+        lineColor={_lineColor}
+        onChangeLineColor={onChangeLineColor}
+        onClickUndo={onClickUndo}
+        onClickRedo={onClickRedo}
+        onChangeFile={onChangeFile}
+        toggleControls={toggleControls}
       />
-      <ControlWrapper>
-        <button onClick={toggleControls}>펜설정</button>
-        <button onClick={onClickUndo}>실행취소</button>
-        <button onClick={onClickRedo}>다시실행</button>
-      </ControlWrapper>
     </>
   );
 };

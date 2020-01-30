@@ -18,6 +18,7 @@ export const LeftWrapper = styled.div`
 export const LogoWrapper = styled.div`
   width: 100%;
   height: 100px;
+  background-color: #6869e3;
 `;
 
 export const PaginationWrapper = styled.div`
@@ -25,13 +26,12 @@ export const PaginationWrapper = styled.div`
   flex-direction: column;
   align-items: center;
   padding-top: 20px;
-  background-color: ghostwhite;
+  background-color: #4a4ab1;
   width: 100%;
   overflow-y: auto;
   display: inline-flex;
   width: 100%;
   height: calc(100% - 100px);
-  border: 1px solid red;
 `;
 
 export const PageThumb = styled.div`
@@ -41,15 +41,17 @@ export const PageThumb = styled.div`
   border: 3px ${props => (props.selected ? 'pink' : 'black')} solid;
   margin-bottom: 15px;
   background-color: ${props => props.color};
+  box-sizing: border-box;
 `;
 
 export const CanvasWrapper = styled.div`
-  /* display: flex;
-  justify-content: center; */
-  border: 1px red solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 3;
   width: 100%;
-  height: 000px;
+  height: 100%;
+  background-color: wheat;
 `;
 export const PanWrapper = styled.div`
   flex: 1;
@@ -60,7 +62,6 @@ export const PanWrapper = styled.div`
 
 export const RightWrapper = styled.div`
   flex: 4;
-  border: 4px khaki solid;
   display: flex;
   flex-direction: column;
 `;
