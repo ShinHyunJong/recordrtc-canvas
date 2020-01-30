@@ -18,12 +18,13 @@ import {
   PanWrapper,
   CanvasWrapper,
   PaginationWrapper,
+  PageThumb,
 } from './styles';
 
 export const Video = styled.video``;
 const initialState = {
   id: 0,
-  color: 'skyblue',
+  color: 'white',
   point: { last: [], current: [] },
 };
 export default function HomePage() {
@@ -37,6 +38,7 @@ export default function HomePage() {
   const [_image, setImage] = useState(null);
   const [pageList, setPageList] = useState([initialState]);
   const [selectedStream, setSelectedStream] = useState(initialState);
+  const [isRecording, setIsRecording] = useState(false);
 
   // useEffect(() => {
   //   const cRef = canvasEl.current;
@@ -44,6 +46,7 @@ export default function HomePage() {
 
   const onClickStart = () => {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(audioStream => {
+      setIsRecording(true);
       setAudioStream(audioStream);
       const canvas = canvasEl.current;
       const canvasStream = canvas.captureStream(10);
@@ -73,6 +76,7 @@ export default function HomePage() {
       console.log(blob);
       _audioStream.stop();
       _canvasStream.stop();
+      setIsRecording(false);
     });
   };
 
@@ -91,7 +95,7 @@ export default function HomePage() {
     const currentStreamArray = fromJS(pageList);
     const newStream = {
       id: pageList[pageList.length - 1].id + 1,
-      color: 'yellow',
+      color: 'white',
       point: { last: [], current: [] },
     };
     const newArray = [...currentStreamArray.toJS(), newStream];
@@ -135,33 +139,32 @@ export default function HomePage() {
         <button onClick={onClickEnd}>end</button>
         <PaginationWrapper>
           {pageList.map(x => (
-            <div
+            <PageThumb
+              key={x.id}
               onClick={() => onClickPage(x)}
-              style={{
-                width: 100,
-                height: 100,
-                backgroundColor: x.color,
-              }}
+              selected={x.id === selectedStream.id}
+              color={x.color}
             />
           ))}
         </PaginationWrapper>
       </LeftWrapper>
       <RightWrapper>
         <CanvasWrapper ref={canvasWrapperRef}>
-          {/* <RainbowCanvas /> */}
-          <CustomCanvas
-            canvasWrapperRef={canvasWrapperRef}
-            canvasRef={canvasEl}
-            selectedStream={selectedStream}
-            image={_image}
-            pageList={pageList}
-            // onLeaveMouse={onLeaveMouse}
-            onDraw={onDraw}
-          />
+          {isRecording ? (
+            <CustomCanvas
+              canvasWrapperRef={canvasWrapperRef}
+              canvasRef={canvasEl}
+              selectedStream={selectedStream}
+              image={_image}
+              pageList={pageList}
+              // onLeaveMouse={onLeaveMouse}
+              onDraw={onDraw}
+            />
+          ) : (
+            <Video controls src={_blob} autoPlay loop />
+          )}
         </CanvasWrapper>
-        {/* <PanWrapper>
-          <Video controls src={_blob} autoPlay loop />
-        </PanWrapper> */}
+        <PanWrapper />
       </RightWrapper>
     </Wrapper>
   );
