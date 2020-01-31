@@ -87,6 +87,8 @@
     "react-intl": "2.8.0",
     "react-redux": "7.0.2",
     "react-router-dom": "5.0.0",
+    "react-touch-canvas": "^0.4.4",
+    "react-youtube": "^7.9.0",
     "recordrtc": "^5.5.8",
     "redux": "4.0.1",
     "redux-saga": "1.0.2",

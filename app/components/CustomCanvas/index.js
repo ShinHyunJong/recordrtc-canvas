@@ -1,6 +1,7 @@
 /* eslint-disable jsx-a11y/mouse-events-have-key-events */
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { fromJS } from 'immutable';
+import { Touch, Canvas } from 'react-touch-canvas';
 import { StyledCanvas } from './styles';
 import Controller from './Controller';
 
@@ -11,6 +12,9 @@ const initialLogState = {
   lineWidth: 5,
   lineColor: '#696969',
 };
+
+const customWidth = 1280;
+const customHeight = 720;
 
 const CustomCanvas = ({
   canvasWrapperRef,
@@ -33,6 +37,43 @@ const CustomCanvas = ({
   const [_lineWidth, setLineWidth] = useState(initialLogState.lineWidth);
   const [_lineColor, setLineColor] = useState(initialLogState.lineColor);
   const [_imageUrl, setImageUrl] = useState(null);
+  const [canvasWrapperWidth, setCanvasWrapperWidth] = useState(0);
+  const [canvasWrapperHeight, setCanvasWrapperHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const ctx = getCtx();
+    ctx.strokeStyle = _lineColor;
+    ctx.lineWidth = _lineWidth;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+  }, []);
+
+  useEffect(() => {
+    setCanvasWrapperWidth(canvasWrapperRef.current.offsetWidth);
+    setCanvasWrapperHeight(canvasWrapperRef.current.offsetHeight);
+  }, [canvasWrapperRef]);
+
+  useEffect(() => {
+    // 처음 로그 초기화
+    setLog(selectedStream.point);
+    setDeletedLog(selectedStream.deletedPoint);
+    const { point, imageUrl } = selectedStream;
+
+    if (imageUrl) {
+      drawImage(imageUrl);
+      if (point.last.length !== 0) {
+        setTimeout(() => {
+          drawPoints(point);
+        }, 0);
+      }
+    } else {
+      setImageUrl(null);
+      setBlank();
+      if (point.last.length !== 0) {
+        drawPoints(point);
+      }
+    }
+  }, [selectedStream]);
 
   const getCanvas = () => {
     const canvas = canvasRef.current;
@@ -41,37 +82,18 @@ const CustomCanvas = ({
 
   const getCtx = () => getCanvas().getContext('2d');
 
-  const setFullWidth = () => {
-    const canvas = getCanvas();
-    // const canvasWrapperWidth = canvasWrapperRef.current.clientWidth;
-    // const canvasWrapperHeight = canvasWrapperRef.current.clientHeight;
-
-    const canvasWrapperWidth = 800;
-    const canvasWrapperHeight = 600;
-
-    canvas.width = canvasWrapperWidth;
-    canvas.height = canvasWrapperHeight;
-    canvas.style.width = canvasWrapperWidth;
-    canvas.style.height = canvasWrapperHeight;
-    return {
-      parentWidth: canvasWrapperWidth,
-      parentHeight: canvasWrapperHeight,
-    };
-  };
-
   const setBlank = () => {
     const ctx = getCtx();
-    const { parentWidth, parentHeight } = setFullWidth();
     ctx.fillStyle = selectedStream.color;
-    ctx.fillRect(0, 0, parentWidth, parentHeight);
+    ctx.fillRect(0, 0, customWidth, customHeight);
   };
 
   const drawImage = imageUrl => {
     // const { parentWidth, parentHeight } = setFullWidth();
     const ctx = getCtx();
-    const newImage = new Image(800, 'auto');
+    const newImage = new Image(customWidth, 'auto');
     newImage.onload = () => {
-      ctx.drawImage(newImage, 0, 0, 800, 600);
+      ctx.drawImage(newImage, 0, 0, customWidth, customHeight);
     };
     newImage.src = imageUrl;
     setImageUrl(imageUrl);
@@ -216,8 +238,8 @@ const CustomCanvas = ({
       }, 0);
     } else {
       setBlank();
-      drawPoints(newLog);
     }
+    drawPoints(newLog);
   };
 
   const onClickRedo = () => {
@@ -297,39 +319,11 @@ const CustomCanvas = ({
     setLineColor(e.target.value);
   };
 
-  useLayoutEffect(() => {
-    const ctx = getCtx();
-    ctx.strokeStyle = _lineColor;
-    ctx.lineWidth = _lineWidth;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-  }, []);
-
-  useEffect(() => {
-    console.log(selectedStream);
-    // 처음 로그 초기화
-    setLog(selectedStream.point);
-    setDeletedLog(selectedStream.deletedPoint);
-    const { point, imageUrl } = selectedStream;
-
-    if (imageUrl) {
-      drawImage(imageUrl);
-      if (point.last.length !== 0) {
-        setTimeout(() => {
-          drawPoints(point);
-        }, 0);
-      }
-    } else {
-      setImageUrl(null);
-      setBlank();
-      if (point.last.length !== 0) {
-        drawPoints(point);
-      }
-    }
-  }, [selectedStream]);
-
   return (
     <>
+      {/* <Touch>
+        <Canvas />
+      </Touch> */}
       <StyledCanvas
         ref={canvasRef}
         id="draw"
@@ -337,6 +331,11 @@ const CustomCanvas = ({
         onMouseDown={onMouseDown}
         onMouseUp={onMouseUp}
         onMouseOut={onMouseOut}
+        onTouchMove={draw}
+        onTouchStart={onMouseDown}
+        onTouchEnd={onMouseUp}
+        width={customWidth}
+        height={customHeight}
       />
       <Controller
         display={controlDisplay}

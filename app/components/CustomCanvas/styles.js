@@ -4,8 +4,8 @@ export const StyledCanvas = styled.canvas`
   /* width: 100%;
   height: 100%; */
 
-  cursor: url('https://supaja-v3-crm.s3.ap-northeast-2.amazonaws.com/pen.png'),
-    auto;
+  /* cursor: url('https://supaja-v3-crm.s3.ap-northeast-2.amazonaws.com/pen.png'),
+    auto; */
 `;
 
 export const ControlWrapper = styled.div`

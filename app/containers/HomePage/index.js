@@ -8,6 +8,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { FormattedMessage } from 'react-intl';
 import styled from 'styled-components';
+import YouTube from 'react-youtube';
 import { fromJS } from 'immutable';
 
 import { CustomCanvas } from '../../components';
@@ -37,7 +38,6 @@ export default function HomePage() {
   const [_audioStream, setAudioStream] = useState(null);
   const [_canvasStream, setCanvasStream] = useState(null);
   const [_blob, setBlob] = useState(null);
-  const [_image, setImage] = useState(null);
   const [pageList, setPageList] = useState([initialState]);
   const [selectedStream, setSelectedStream] = useState(initialState);
   const [isRecording, setIsRecording] = useState(false);
@@ -47,7 +47,7 @@ export default function HomePage() {
       setIsRecording(true);
       setAudioStream(audioStream);
       const canvas = canvasEl.current;
-      const canvasStream = canvas.captureStream(10);
+      const canvasStream = canvas.captureStream();
       setCanvasStream(canvasStream);
 
       const finalStream = new MediaStream();
@@ -68,7 +68,7 @@ export default function HomePage() {
 
   const onClickEnd = () => {
     recorder.stopRecording(() => {
-      recorder.getDataURL(url => console.log(url));
+      // recorder.getDataURL(url => console.log(atob(url)));
       const blob = recorder.getBlob();
       setBlob(URL.createObjectURL(blob));
       console.log(URL.createObjectURL(blob));
@@ -76,7 +76,23 @@ export default function HomePage() {
       _audioStream.stop();
       _canvasStream.stop();
       setIsRecording(false);
+      download(blob);
     });
+  };
+
+  const download = blob => {
+    const name = 'recording.webm';
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 100);
   };
 
   const onChangeImage = imageUrl => {
@@ -130,31 +146,21 @@ export default function HomePage() {
   };
 
   const renderContent = () => {
-    if (!isRecording && !_blob) {
-      return (
-        <CanvasWrapper>
-          <h3>녹화를 눌러주세요</h3>
-        </CanvasWrapper>
-      );
-    }
-    if (isRecording && !_blob) {
-      return (
-        <CustomCanvas
-          canvasWrapperRef={canvasWrapperRef}
-          canvasRef={canvasEl}
-          selectedStream={selectedStream}
-          // onLeaveMouse={onLeaveMouse}
-          onDraw={onDraw}
-          onChangeImage={onChangeImage}
-          unDo={onClickControl}
-          reDo={onClickControl}
-        />
-      );
-    }
     if (!isRecording && _blob) {
       return <Video controls src={_blob} autoPlay loop />;
     }
-    return null;
+    return (
+      <CustomCanvas
+        canvasWrapperRef={canvasWrapperRef}
+        canvasRef={canvasEl}
+        selectedStream={selectedStream}
+        // onLeaveMouse={onLeaveMouse}
+        onDraw={onDraw}
+        onChangeImage={onChangeImage}
+        unDo={onClickControl}
+        reDo={onClickControl}
+      />
+    );
   };
 
   return (
@@ -177,6 +183,7 @@ export default function HomePage() {
         </PaginationWrapper>
       </LeftWrapper>
       <RightWrapper>
+        {/* <YouTube videoId="BHWS7-fBeDg" /> */}
         <CanvasWrapper ref={canvasWrapperRef}>{renderContent()}</CanvasWrapper>
       </RightWrapper>
     </Wrapper>
