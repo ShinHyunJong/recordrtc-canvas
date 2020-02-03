@@ -62,6 +62,4 @@ export const PanWrapper = styled.div`
 
 export const RightWrapper = styled.div`
   flex: 5;
-  display: flex;
-  flex-direction: column;
 `;

@@ -1,9 +1,10 @@
 /* eslint-disable jsx-a11y/mouse-events-have-key-events */
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { Stage, Layer, Image, Line, Text } from 'react-konva';
 import { fromJS } from 'immutable';
-import { Touch, Canvas } from 'react-touch-canvas';
-import { StyledCanvas } from './styles';
+import { StyledCanvas, Wrapper } from './styles';
 import Controller from './Controller';
+import { useResize } from '../../utils/hooks';
 
 const initialLogState = {
   last: [],
@@ -26,11 +27,15 @@ const CustomCanvas = ({
   reDo,
   onChangeImage,
 }) => {
+  const wrapperRef = useRef(null);
+  const stageRef = useRef(null);
+
   const [isDrawing, setIsDrawing] = useState(false);
   const [undoClicked, setUndoClicked] = useState(false);
   const [_lastX, setLastX] = useState(0);
   const [_lastY, setLastY] = useState(0);
   const [log, setLog] = useState(initialLogState);
+  const [lines, setLines] = useState([]);
   const [deletedLog, setDeletedLog] = useState(initialLogState);
   const [drawTag, setDrawTag] = useState(initialLogState.drawTag);
   const [controlDisplay, setControlDisplay] = useState(true);
@@ -40,47 +45,45 @@ const CustomCanvas = ({
   const [canvasWrapperWidth, setCanvasWrapperWidth] = useState(0);
   const [canvasWrapperHeight, setCanvasWrapperHeight] = useState(0);
 
-  useLayoutEffect(() => {
-    const ctx = getCtx();
-    ctx.strokeStyle = _lineColor;
-    ctx.lineWidth = _lineWidth;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-  }, []);
+  // useLayoutEffect(() => {
+  //   const ctx = getCtx();
+  //   ctx.strokeStyle = _lineColor;
+  //   ctx.lineWidth = _lineWidth;
+  //   ctx.lineJoin = 'round';
+  //   ctx.lineCap = 'round';
+  // }, []);
 
   useEffect(() => {
     setCanvasWrapperWidth(canvasWrapperRef.current.offsetWidth);
     setCanvasWrapperHeight(canvasWrapperRef.current.offsetHeight);
   }, [canvasWrapperRef]);
 
-  useEffect(() => {
-    // 처음 로그 초기화
-    setLog(selectedStream.point);
-    setDeletedLog(selectedStream.deletedPoint);
-    const { point, imageUrl } = selectedStream;
+  // useEffect(() => {
+  //   // 처음 로그 초기화
+  //   setLog(selectedStream.point);
+  //   setDeletedLog(selectedStream.deletedPoint);
+  //   const { point, imageUrl } = selectedStream;
 
-    if (imageUrl) {
-      drawImage(imageUrl);
-      if (point.last.length !== 0) {
-        setTimeout(() => {
-          drawPoints(point);
-        }, 0);
-      }
-    } else {
-      setImageUrl(null);
-      setBlank();
-      if (point.last.length !== 0) {
-        drawPoints(point);
-      }
-    }
-  }, [selectedStream]);
+  //   if (imageUrl) {
+  //     drawImage(imageUrl);
+  //     if (point.last.length !== 0) {
+  //       setTimeout(() => {
+  //         drawPoints(point);
+  //       }, 0);
+  //     }
+  //   } else {
+  //     setImageUrl(null);
+  //     setBlank();
+  //     if (point.last.length !== 0) {
+  //       drawPoints(point);
+  //     }
+  //   }
+  // }, [selectedStream]);
 
-  const getCanvas = () => {
-    const canvas = canvasRef.current;
-    return canvas;
+  const getStage = () => {
+    const stage = stageRef.current.getStage();
+    return stage;
   };
-
-  const getCtx = () => getCanvas().getContext('2d');
 
   const setBlank = () => {
     const ctx = getCtx();
@@ -99,34 +102,29 @@ const CustomCanvas = ({
     setImageUrl(imageUrl);
   };
 
-  const drawLine = ({
-    offsetX,
-    offsetY,
-    isFirst,
-    lastX,
-    lastY,
-    lineWidth,
-    lineColor,
-  }) => {
-    const ctx = getCtx();
-    ctx.beginPath();
-    if (!isFirst) {
-      ctx.moveTo(lastX || _lastX, lastY || _lastY);
-    }
-    ctx.strokeStyle = lineColor || _lineColor;
-    ctx.lineWidth = lineWidth || _lineWidth;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-    ctx.lineTo(offsetX, offsetY);
-    ctx.stroke();
-    setLastX(offsetX);
-    setLastY(offsetY);
+  const drawLine = () => {
+    const stage = getStage();
+    const point = stage.getPointerPosition();
+    let lastLine = lines[lines.length - 1];
+    // add point
+    lastLine = lastLine.concat([point.x, point.y]);
+
+    // replace last
+    lines.splice(lines.length - 1, 1, lastLine);
+    setLines(lines.concat());
   };
 
   const draw = e => {
-    const { offsetX, offsetY } = e.nativeEvent;
+    const canvas = getCanvas();
+    console.log(canvas.getPointerPosition);
+    const isTouch = e.type === 'touchmove';
     if (isDrawing) {
-      drawLine({ offsetX, offsetY });
+      const { touchX, touchY } = getTouchPos(e);
+      const { offsetX, offsetY } = e.nativeEvent;
+      drawLine({
+        offsetX: isTouch ? touchX : offsetX,
+        offsetY: isTouch ? touchY : offsetY,
+      });
       // 마지막 포인트 배열에서 중복 제거.
       const filtered = log.last.filter(
         c => c.offsetX === _lastX && c.offsetY === _lastY,
@@ -146,8 +144,8 @@ const CustomCanvas = ({
         const currentLog = [
           ...log.current,
           {
-            offsetX,
-            offsetY,
+            offsetX: isTouch ? touchX : offsetX,
+            offsetY: isTouch ? touchX : offsetY,
             drawTag,
             lineWidth: _lineWidth,
             lineColor: _lineColor,
@@ -157,24 +155,25 @@ const CustomCanvas = ({
       } else if (filtered.length !== 0) {
         newPoint = log;
       }
+      console.log(newPoint);
       setLog(newPoint);
       onDraw(newPoint);
     }
   };
 
   const onMouseDown = e => {
+    const isTouch = e.type === 'touchstart';
+    const { touchX, touchY } = getTouchPos(e);
     const { offsetX, offsetY } = e.nativeEvent;
     setIsDrawing(true);
     drawLine({
-      offsetX,
-      offsetY,
+      offsetX: isTouch ? touchX : offsetX,
+      offsetY: isTouch ? touchY : offsetY,
       isFirst: true,
     });
   };
 
-  const onMouseUp = e => {
-    const { offsetX, offsetY } = e.nativeEvent;
-    drawLine({ offsetX, offsetY });
+  const onMouseUp = () => {
     setIsDrawing(false);
     setDrawTag(drawTag + 1);
     setUndoClicked(false);
@@ -319,13 +318,47 @@ const CustomCanvas = ({
     setLineColor(e.target.value);
   };
 
+  const onTouchStart = () => {
+    setIsDrawing(true);
+    setLines([...lines, []]);
+  };
+
+  const onTouchEnd = () => {
+    setIsDrawing(false);
+  };
+
+  const onTouchMove = () => {
+    if (!isDrawing) return;
+    drawLine();
+  };
+
+  console.log(lines);
+
+  const { rect } = useResize(wrapperRef);
+
+  console.log(rect);
+
   return (
-    <>
-      {/* <Touch>
-        <Canvas />
-      </Touch> */}
-      <StyledCanvas
-        ref={canvasRef}
+    <Wrapper ref={wrapperRef}>
+      <Stage
+        width={1000}
+        height={600}
+        onContentTouchmove={onTouchMove}
+        onContentTouchstart={onTouchStart}
+        onContentTouchend={onTouchEnd}
+        style={{ backgroundColor: 'white ' }}
+        ref={stageRef}
+      >
+        <Layer ref={canvasRef}>
+          <Text text="Just start drawing" />
+          {lines.map((line, i) => (
+            <Line key={i} points={line} stroke={_lineColor} />
+          ))}
+        </Layer>
+      </Stage>
+
+      {/* <StyledCanvas
+        ref= stageRef}
         id="draw"
         onMouseMove={draw}
         onMouseDown={onMouseDown}
@@ -336,7 +369,7 @@ const CustomCanvas = ({
         onTouchEnd={onMouseUp}
         width={customWidth}
         height={customHeight}
-      />
+      /> */}
       <Controller
         display={controlDisplay}
         lineWidth={_lineWidth}
@@ -348,7 +381,7 @@ const CustomCanvas = ({
         onChangeFile={onChangeFile}
         toggleControls={toggleControls}
       />
-    </>
+    </Wrapper>
   );
 };
 

@@ -43,10 +43,11 @@ export default function HomePage() {
   const [isRecording, setIsRecording] = useState(false);
 
   const onClickStart = () => {
+    console.log(canvasEl);
     navigator.mediaDevices.getUserMedia({ audio: true }).then(audioStream => {
       setIsRecording(true);
       setAudioStream(audioStream);
-      const canvas = canvasEl.current;
+      const canvas = canvasEl.current.canvas._canvas;
       const canvasStream = canvas.captureStream();
       setCanvasStream(canvasStream);
 
