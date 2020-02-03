@@ -26,8 +26,8 @@ export const Video = styled.video``;
 const initialState = {
   id: 0,
   color: 'white',
-  point: { last: [], current: [] },
-  deletedPoint: { last: [], current: [] },
+  points: [],
+  deletedPoint: [],
   imageUrl: null,
 };
 export default function HomePage() {
@@ -112,8 +112,8 @@ export default function HomePage() {
     const newStream = {
       id: pageList[pageList.length - 1].id + 1,
       color: 'white',
-      point: { last: [], current: [] },
-      deletedPoint: { last: [], current: [] },
+      points: [],
+      deletedPoint: [],
       imageUrl: null,
     };
     const newArray = [...currentStreamArray.toJS(), newStream];
@@ -124,11 +124,11 @@ export default function HomePage() {
     setSelectedStream(page);
   };
 
-  const onDraw = point => {
+  const onDraw = points => {
     const currentPageList = fromJS(pageList);
     const transformed = currentPageList.toJS().map(x => {
       if (selectedStream.id === x.id) {
-        return { ...x, point };
+        return { ...x, points };
       }
       return { ...x };
     });
@@ -139,7 +139,7 @@ export default function HomePage() {
     const currentPageList = fromJS(pageList);
     const transformed = currentPageList.toJS().map(x => {
       if (selectedStream.id === x.id) {
-        return { ...x, point: undoLog, deletedPoint: redoLog };
+        return { ...x, points: undoLog, deletedPoint: redoLog };
       }
       return { ...x };
     });
