@@ -1,6 +1,7 @@
+/* eslint-disable react/no-array-index-key */
 /* eslint-disable jsx-a11y/mouse-events-have-key-events */
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-import { Stage, Layer, Image, Line, Text, Rect, FastLayer } from 'react-konva';
+import React, { useState, useEffect, useRef } from 'react';
+import { Stage, Layer, Line, Text, Rect, FastLayer, Image } from 'react-konva';
 import { fromJS } from 'immutable';
 import { StyledCanvas, Wrapper } from './styles';
 import Controller from './Controller';
@@ -9,20 +10,17 @@ import { useResize } from '../../utils/hooks';
 const initialLogState = {
   points: [],
   drawTag: 0,
-  lineWidth: 5,
+  lineWidth: 3,
   lineColor: '#696969',
 };
 
 const customWidth = 1280;
 const customHeight = 720;
 
-const sampleLogs = [{ points: [1, 2, 3, 4, 90, 100] }];
-
 const CustomCanvas = ({
   canvasWrapperRef,
   canvasRef,
   selectedStream,
-  onLeaveMouse,
   onDraw,
   unDo,
   reDo,
@@ -33,19 +31,13 @@ const CustomCanvas = ({
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [undoClicked, setUndoClicked] = useState(false);
-  const [_lastX, setLastX] = useState(0);
-  const [_lastY, setLastY] = useState(0);
   const [log, setLog] = useState([]);
-  const [lines, setLines] = useState([]);
-  const [drawTagArray, setDrawTagArray] = useState([]);
   const [_deletedLog, setDeletedLog] = useState([]);
   const [drawTag, setDrawTag] = useState(initialLogState.drawTag);
   const [controlDisplay, setControlDisplay] = useState(true);
   const [_lineWidth, setLineWidth] = useState(initialLogState.lineWidth);
   const [_lineColor, setLineColor] = useState(initialLogState.lineColor);
   const [_imageUrl, setImageUrl] = useState(null);
-  const [canvasWrapperWidth, setCanvasWrapperWidth] = useState(0);
-  const [canvasWrapperHeight, setCanvasWrapperHeight] = useState(0);
 
   // useLayoutEffect(() => {
   //   checkSize();
@@ -56,13 +48,9 @@ const CustomCanvas = ({
   // }, []);
 
   useEffect(() => {
-    setCanvasWrapperWidth(canvasWrapperRef.current.offsetWidth);
-    setCanvasWrapperHeight(canvasWrapperRef.current.offsetHeight);
-  }, [canvasWrapperRef]);
-
-  useEffect(() => {
     setLog(selectedStream.points);
     setDeletedLog(selectedStream.deletedPoint);
+    setImageUrl(selectedStream.imageUrl);
   }, [selectedStream]);
 
   const getStage = () => {
@@ -79,34 +67,24 @@ const CustomCanvas = ({
     const stage = getStage();
     const point = stage.getPointerPosition();
 
-    // const lastLog = log[log.length - 1].points;
-    // const newLine = [
-    //   ...log,
-    //   {
-    //     points: [...lastLog, point.x, point.y],
-    //     drawTag,
-    //     lineColor: _lineColor,
-    //     lineWidth: _lineWidth,
-    //   },
-    // ];
-    // setLog(newLine);
+    const lastLog = log[log.length - 1];
 
-    let lastLine = lines[lines.length - 1];
-    lastLine = lastLine.concat([point.x, point.y]);
+    let lastLogPoints = log[log.length - 1].points;
+    lastLogPoints = lastLogPoints.concat([point.x, point.y]);
 
-    let lastDrawTag = drawTagArray[drawTagArray.length - 1];
-    lastDrawTag = lastDrawTag.concat([drawTag, drawTag]);
+    const newLog = {
+      ...lastLog,
+      points: lastLogPoints,
+      drawTag,
+      lineColor: _lineColor,
+      lineWidth: _lineWidth,
+    };
 
-    // add point
+    const currentLogState = [...log];
+    currentLogState.splice(log.length - 1, 1, newLog);
 
-    // replace last
-    lines.splice(lines.length - 1, 1, lastLine);
-    drawTagArray.splice(drawTagArray.length - 1, 1, lastDrawTag);
-
-    setLines(lines.concat());
-    setDrawTagArray(drawTagArray.concat());
-
-    // onDraw(newLine);
+    setLog(currentLogState);
+    onDraw(currentLogState);
   };
 
   const onClickUndo = () => {
@@ -116,25 +94,24 @@ const CustomCanvas = ({
     const deletedJS = currentDeleted.toJS();
 
     const logLength = logJS.length;
-    if (lines.length === 0) return;
+    if (logLength === 0) return;
 
     // 맨 마지막 태깅 다 삭제
-    const lastDrawTag = drawTagArray[drawTagArray - 1];
-    const deletedIndex = drawTagArray.findIndex(c => c !== lastDrawTag);
-    console.log(deletedIndex);
+    const lastDrawTag = logJS[logLength - 1].drawTag;
+    const deletedLog = logJS.filter(c => c.drawTag !== lastDrawTag);
 
-    // // 삭제한 태깅
-    // const targetLog = logJS.filter(c => c.drawTag === lastDrawTag);
-    // // 삭제 로그에 추가한 redo배열
-    // const newDeletedLog = [...targetLog, ...deletedJS];
+    // 삭제한 태깅
+    const targetLog = logJS.filter(c => c.drawTag === lastDrawTag);
+    // 삭제 로그에 추가한 redo배열
+    const newDeletedLog = [...targetLog, ...deletedJS];
 
-    // // 로그 바꾸고
-    // setLog(deletedLog);
-    // // 삭제된 로그에 추가
-    // setDeletedLog(newDeletedLog);
-    // // 각 페이지의 로그 바꾸고
-    // unDo({ undoLog: deletedLog, redoLog: newDeletedLog });
-    // setUndoClicked(true);
+    // 로그 바꾸고
+    setLog(deletedLog);
+    // 삭제된 로그에 추가
+    setDeletedLog(newDeletedLog);
+    // 각 페이지의 로그 바꾸고
+    unDo({ undoLog: deletedLog, redoLog: newDeletedLog });
+    setUndoClicked(true);
   };
 
   const onClickRedo = () => {
@@ -171,8 +148,12 @@ const CustomCanvas = ({
     reader.readAsDataURL(file);
     reader.onloadend = () => {
       const base64 = reader.result;
-      drawImage(base64);
-      onChangeImage(base64);
+      const image = new window.Image();
+      image.src = base64;
+      image.onload = () => {
+        setImageUrl(image);
+        onChangeImage(image);
+      };
     };
   };
 
@@ -186,17 +167,10 @@ const CustomCanvas = ({
 
   const onTouchStart = () => {
     setIsDrawing(true);
-    setLines([...lines, []]);
-    setDrawTagArray([...drawTagArray, []]);
-    // setLog([
-    //   ...log,
-    //   { points: [], drawTag, lineColor: _lineColor, lineWidth: _lineWidth },
-    // ]);
-  };
-
-  const onTouchEnd = () => {
-    setIsDrawing(false);
-    setDrawTag(drawTag + 1);
+    setLog([
+      ...log,
+      { points: [], drawTag, lineColor: _lineColor, lineWidth: _lineWidth },
+    ]);
   };
 
   const onTouchMove = () => {
@@ -204,7 +178,10 @@ const CustomCanvas = ({
     drawLine();
   };
 
-  const lineArray = log.map(x => x.points);
+  const onTouchEnd = () => {
+    setIsDrawing(false);
+    setDrawTag(drawTag + 1);
+  };
 
   return (
     <Wrapper ref={wrapperRef}>
@@ -220,26 +197,21 @@ const CustomCanvas = ({
         ref={stageRef}
       >
         <FastLayer ref={canvasRef} hitGraphEnabled={false}>
-          {lines.map((line, i) => (
+          <Rect width={960} height={540} fill="#ffffff" />
+
+          {_imageUrl ? (
+            <Image image={_imageUrl} width={960} height={540} />
+          ) : null}
+          {log.map((line, i) => (
             <Line
-              key={i}
-              points={line}
-              stroke={_lineColor}
-              // strokeWidth={line.lineWidth}
-              lineCap="round"
-              lineJoin="round"
-            />
-          ))}
-          {/* {log.map((line, i) => (
-            <Line
-              key={i}
+              key={`line-${i}`}
               points={line.points}
               stroke={line.lineColor}
               strokeWidth={line.lineWidth}
               lineCap="round"
               lineJoin="round"
             />
-          ))} */}
+          ))}
         </FastLayer>
       </Stage>
 
