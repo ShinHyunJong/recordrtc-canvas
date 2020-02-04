@@ -56,6 +56,13 @@ const CustomCanvas = ({
       .offsetWidth *
       9) /
       16}px`;
+
+    const width = wrapperRef.current.offsetWidth;
+
+    canvasRef.current.canvas._canvas.width = width;
+    canvasRef.current.canvas._canvas.height = (width * 9) / 16;
+    canvasRef.current.canvas._canvas.style.width = `${width}px`;
+    canvasRef.current.canvas._canvas.style.height = `${(width * 9) / 16}px`;
   }, []);
 
   useEffect(() => {
@@ -73,9 +80,12 @@ const CustomCanvas = ({
       .offsetWidth *
       9) /
       16}px`;
+
     const width = wrapperRef.current.offsetWidth;
     canvasRef.current.canvas._canvas.style.width = `${width}px`;
     canvasRef.current.canvas._canvas.style.height = `${(width * 9) / 16}px`;
+
+    console.log(canvasRef.current.canvas);
     setStageWidth(width);
   };
 
@@ -209,15 +219,11 @@ const CustomCanvas = ({
     setDrawTag(drawTag + 1);
   };
 
-  const scale = 1600 / stageWidth;
-
   console.log(stageWidth);
 
   return (
     <Wrapper ref={wrapperRef}>
       <Stage
-        width={800}
-        height={450}
         onContentTouchmove={onTouchMove}
         onContentTouchstart={onTouchStart}
         onContentTouchend={onTouchEnd}
