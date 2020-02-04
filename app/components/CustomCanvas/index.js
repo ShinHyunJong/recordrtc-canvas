@@ -1,6 +1,6 @@
 /* eslint-disable react/no-array-index-key */
 /* eslint-disable jsx-a11y/mouse-events-have-key-events */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Stage, Layer, Line, Text, Rect, FastLayer, Image } from 'react-konva';
 import { fromJS } from 'immutable';
 import { StyledCanvas, Wrapper } from './styles';
@@ -38,20 +38,46 @@ const CustomCanvas = ({
   const [_lineWidth, setLineWidth] = useState(initialLogState.lineWidth);
   const [_lineColor, setLineColor] = useState(initialLogState.lineColor);
   const [_imageUrl, setImageUrl] = useState(null);
+  const [stageWidth, setStageWidth] = useState(0);
 
-  // useLayoutEffect(() => {
-  //   checkSize();
-  //   window.addEventListener('resize', checkSize);
-  //   return () => {
-  //     window.removeEventListener('resize', checkSize);
-  //   };
-  // }, []);
+  useEffect(() => {
+    checkSize();
+    window.addEventListener('resize', checkSize);
+    return () => {
+      window.removeEventListener('resize', checkSize);
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    canvasRef.current.parent.content.style.width = `${
+      wrapperRef.current.offsetWidth
+    }px`;
+    canvasRef.current.parent.content.style.height = `${(wrapperRef.current
+      .offsetWidth *
+      9) /
+      16}px`;
+  }, []);
 
   useEffect(() => {
     setLog(selectedStream.points);
     setDeletedLog(selectedStream.deletedPoint);
     setImageUrl(selectedStream.imageUrl);
   }, [selectedStream]);
+
+  const checkSize = () => {
+    if (!wrapperRef.current) return;
+    canvasRef.current.parent.content.style.width = `${
+      wrapperRef.current.offsetWidth
+    }px`;
+    canvasRef.current.parent.content.style.height = `${(wrapperRef.current
+      .offsetWidth *
+      9) /
+      16}px`;
+    const width = wrapperRef.current.offsetWidth;
+    canvasRef.current.canvas._canvas.style.width = `${width}px`;
+    canvasRef.current.canvas._canvas.style.height = `${(width * 9) / 16}px`;
+    setStageWidth(width);
+  };
 
   const getStage = () => {
     const stage = stageRef.current.getStage();
@@ -183,11 +209,15 @@ const CustomCanvas = ({
     setDrawTag(drawTag + 1);
   };
 
+  const scale = 1600 / stageWidth;
+
+  console.log(stageWidth);
+
   return (
     <Wrapper ref={wrapperRef}>
       <Stage
-        width={960}
-        height={540}
+        width={800}
+        height={450}
         onContentTouchmove={onTouchMove}
         onContentTouchstart={onTouchStart}
         onContentTouchend={onTouchEnd}
@@ -195,13 +225,17 @@ const CustomCanvas = ({
         onMouseDown={onTouchStart}
         onMouseMove={onTouchMove}
         ref={stageRef}
+        style={{
+          border: '3px black solid',
+        }}
       >
-        <FastLayer ref={canvasRef} hitGraphEnabled={false}>
-          <Rect width={960} height={540} fill="#ffffff" />
-
-          {_imageUrl ? (
-            <Image image={_imageUrl} width={960} height={540} />
-          ) : null}
+        <Layer ref={canvasRef} hitGraphEnabled={false}>
+          <Rect
+            width={stageWidth}
+            height={(stageWidth * 9) / 16}
+            fill="#ffffff"
+          />
+          {_imageUrl ? <Image image={_imageUrl} /> : null}
           {log.map((line, i) => (
             <Line
               key={`line-${i}`}
@@ -212,7 +246,7 @@ const CustomCanvas = ({
               lineJoin="round"
             />
           ))}
-        </FastLayer>
+        </Layer>
       </Stage>
 
       {/* <StyledCanvas

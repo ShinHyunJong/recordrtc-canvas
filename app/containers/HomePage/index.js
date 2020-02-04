@@ -185,7 +185,7 @@ export default function HomePage() {
       </LeftWrapper>
       <RightWrapper>
         {/* <YouTube videoId="BHWS7-fBeDg" /> */}
-        <CanvasWrapper ref={canvasWrapperRef}>{renderContent()}</CanvasWrapper>
+        {renderContent()}
       </RightWrapper>
     </Wrapper>
   );

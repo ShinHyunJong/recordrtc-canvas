@@ -2,7 +2,6 @@ import styled from 'styled-components';
 
 export const Wrapper = styled.div`
   display: flex;
-  flex-direction: row;
   width: 100%;
   height: 100%;
 `;
@@ -11,7 +10,7 @@ export const LeftWrapper = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1;
-  width: 100%;
+  width: 30%;
   height: 100%;
 `;
 
@@ -44,15 +43,7 @@ export const PageThumb = styled.div`
   box-sizing: border-box;
 `;
 
-export const CanvasWrapper = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 3;
-  width: 100%;
-  height: 100%;
-  background-color: wheat;
-`;
+export const CanvasWrapper = styled.div``;
 export const PanWrapper = styled.div`
   flex: 1;
   height: 100%;
@@ -61,5 +52,6 @@ export const PanWrapper = styled.div`
 `;
 
 export const RightWrapper = styled.div`
-  flex: 5;
+  width: 70%;
+  height: 100%;
 `;

@@ -3,10 +3,14 @@ import styled from 'styled-components';
 export const Wrapper = styled.div`
   width: 100%;
   height: 100%;
-  border: 10px red solid;
+  border: 1px red solid;
   display: flex;
   justify-content: center;
   align-items: center;
+  background-color: wheat;
+  > canvas {
+    flex: 0 0 auto;
+  }
 `;
 
 export const StyledCanvas = styled.canvas`
