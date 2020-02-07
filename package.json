@@ -42,7 +42,10 @@
     "test": "cross-env NODE_ENV=test jest --coverage",
     "test:watch": "cross-env NODE_ENV=test jest --watchAll",
     "coveralls": "cat ./coverage/lcov.info | coveralls",
-    "prettify": "prettier --write"
+    "prettify": "prettier --write",
+    "deploy": "yarn build:clean && yarn build && yarn upload:clean && yarn upload",
+    "upload": "aws s3 cp ./build s3://supaja-v3-crm/ --recursive",
+    "upload:clean": "aws s3 rm s3://supaja-v3-crm/ --recursive"
   },
   "browserslist": [
     "last 2 versions",

@@ -43,28 +43,31 @@ export default function HomePage() {
   const [isRecording, setIsRecording] = useState(false);
 
   const onClickStart = () => {
-    console.log(canvasEl);
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(audioStream => {
-      setIsRecording(true);
-      setAudioStream(audioStream);
-      const canvas = canvasEl.current.canvas._canvas;
-      const canvasStream = canvas.captureStream();
-      setCanvasStream(canvasStream);
+    console.log('navigator');
+    console.log(window.navigator.mediaDevices);
+    window.navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then(audioStream => {
+        setIsRecording(true);
+        setAudioStream(audioStream);
+        const canvas = canvasEl.current.canvas._canvas;
+        const canvasStream = canvas.captureStream();
+        setCanvasStream(canvasStream);
 
-      const finalStream = new MediaStream();
-      getTracks(audioStream, 'audio').forEach(track => {
-        finalStream.addTrack(track);
-      });
-      getTracks(canvasStream, 'video').forEach(track => {
-        finalStream.addTrack(track);
-      });
+        const finalStream = new MediaStream();
+        getTracks(audioStream, 'audio').forEach(track => {
+          finalStream.addTrack(track);
+        });
+        getTracks(canvasStream, 'video').forEach(track => {
+          finalStream.addTrack(track);
+        });
 
-      const newRecorder = RecordRTC(finalStream, {
-        type: 'video',
+        const newRecorder = RecordRTC(finalStream, {
+          type: 'video',
+        });
+        setRecorder(newRecorder);
+        newRecorder.startRecording();
       });
-      setRecorder(newRecorder);
-      newRecorder.startRecording();
-    });
   };
 
   const onClickEnd = () => {

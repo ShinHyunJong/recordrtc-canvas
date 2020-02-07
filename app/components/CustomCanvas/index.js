@@ -14,6 +14,9 @@ const initialLogState = {
   lineColor: '#696969',
 };
 
+const videoWidth = 1600;
+const videoHeight = 900;
+
 const customWidth = 1280;
 const customHeight = 720;
 
@@ -59,8 +62,8 @@ const CustomCanvas = ({
 
     const width = wrapperRef.current.offsetWidth;
 
-    canvasRef.current.canvas._canvas.width = width;
-    canvasRef.current.canvas._canvas.height = (width * 9) / 16;
+    canvasRef.current.canvas._canvas.width = videoWidth;
+    canvasRef.current.canvas._canvas.height = videoHeight;
     canvasRef.current.canvas._canvas.style.width = `${width}px`;
     canvasRef.current.canvas._canvas.style.height = `${(width * 9) / 16}px`;
   }, []);
@@ -73,6 +76,7 @@ const CustomCanvas = ({
 
   const checkSize = () => {
     if (!wrapperRef.current) return;
+
     canvasRef.current.parent.content.style.width = `${
       wrapperRef.current.offsetWidth
     }px`;
@@ -85,7 +89,6 @@ const CustomCanvas = ({
     canvasRef.current.canvas._canvas.style.width = `${width}px`;
     canvasRef.current.canvas._canvas.style.height = `${(width * 9) / 16}px`;
 
-    console.log(canvasRef.current.canvas);
     setStageWidth(width);
   };
 
@@ -219,7 +222,7 @@ const CustomCanvas = ({
     setDrawTag(drawTag + 1);
   };
 
-  console.log(stageWidth);
+  const scale = videoWidth / stageWidth;
 
   return (
     <Wrapper ref={wrapperRef}>
@@ -235,7 +238,12 @@ const CustomCanvas = ({
           border: '3px black solid',
         }}
       >
-        <Layer ref={canvasRef} hitGraphEnabled={false}>
+        <Layer
+          ref={canvasRef}
+          hitGraphEnabled={false}
+          scaleX={scale}
+          scaleY={scale}
+        >
           <Rect
             width={stageWidth}
             height={(stageWidth * 9) / 16}
@@ -250,6 +258,8 @@ const CustomCanvas = ({
               strokeWidth={line.lineWidth}
               lineCap="round"
               lineJoin="round"
+              x={scale}
+              y={scale}
             />
           ))}
         </Layer>
